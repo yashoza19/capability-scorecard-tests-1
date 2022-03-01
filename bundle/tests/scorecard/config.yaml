@@ -3,18 +3,40 @@ apiversion: scorecard.operatorframework.io/v1alpha3
 metadata:
   name: config
 stages:
-- tests:
-  - image: quay.io/operator-framework/custom-scorecard-tests:dev
+- parallel: false
+  tests:
+  - image: quay.io/mrhillsman/capability-scorecard-tests:latest
     entrypoint:
-    - custom-scorecard-tests
-    - customtest1
+      - custom-scorecard-tests
+      - capability-level-one
     labels:
-      suite: custom
-      test: customtest1
-  - image: quay.io/operator-framework/custom-scorecard-tests:dev
+      suite: capabilities
+      test: capability-level-one
+  - image: quay.io/mrhillsman/capability-scorecard-tests:latest
     entrypoint:
-    - custom-scorecard-tests
-    - customtest2
+      - custom-scorecard-tests
+      - capability-level-two
     labels:
-      suite: custom
-      test: customtest2
+      suite: capabilities
+      test: capability-level-two
+  - image: quay.io/mrhillsman/capability-scorecard-tests:latest
+    entrypoint:
+      - custom-scorecard-tests
+      - capability-level-three
+    labels:
+      suite: capabilities
+      test: capability-level-three
+  - image: quay.io/mrhillsman/capability-scorecard-tests:latest
+    entrypoint:
+      - custom-scorecard-tests
+      - capability-level-four
+    labels:
+      suite: capabilities
+      test: capability-level-four
+  - image: quay.io/mrhillsman/capability-scorecard-tests:latest
+    entrypoint:
+      - custom-scorecard-tests
+      - capability-level-five
+    labels:
+      suite: capabilities
+      test: capability-level-five
