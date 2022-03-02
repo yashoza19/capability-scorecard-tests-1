@@ -14,7 +14,7 @@ RUN go mod download
 COPY . .
 
 # Build
-GOOS=linux GOARCH=$TARGETARCH go build -a -o build/custom-scorecard-tests main.go
+RUN GOOS=linux GOARCH=$TARGETARCH go build -a -o build/custom-scorecard-tests main.go
 
 # Final image.
 FROM registry.access.redhat.com/ubi8/ubi-minimal:8.5
@@ -26,6 +26,10 @@ ENV HOME=/opt/custom-scorecard-tests \
 RUN echo "${USER_NAME}:x:${USER_UID}:0:${USER_NAME} user:${HOME}:/sbin/nologin" >> /etc/passwd
 
 WORKDIR ${HOME}
+
+# Add operator-sdk binary
+RUN curl -Lfo /usr/local/bin/operator-sdk https://github.com/operator-framework/operator-sdk/releases/download/v${OPERATOR_SDK_VERSION:-1.14.0}/operator-sdk_${OS:-linux}_${ARCH:-amd64} \
+    && chmod +x /usr/local/bin/operator-sdk
 
 COPY --from=builder /workspace/build/custom-scorecard-tests /usr/local/bin/custom-scorecard-tests
 
