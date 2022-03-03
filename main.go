@@ -15,15 +15,19 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"main/pkg/actions"
+	bundle "main/pkg/bundle"
 	"os"
 	"os/exec"
 
-	log "github.com/sirupsen/logrus"
-
+	_ "github.com/mattn/go-sqlite3"
 	scapiv1alpha3 "github.com/operator-framework/api/pkg/apis/scorecard/v1alpha3"
 	apimanifests "github.com/operator-framework/api/pkg/manifests"
+	log "github.com/sirupsen/logrus"
 )
 
 // This is the custom scorecard test example binary
@@ -35,7 +39,7 @@ import (
 // this binary to run various tests all from within a single
 // test image.
 
-const PodBundleRoot = "/bundle"
+const PodBundleRoot = "bundle"
 
 func main() {
 	entrypoint := os.Args[1:]
@@ -116,21 +120,29 @@ func CapabilityLevelOneTest(bundle *apimanifests.Bundle) scapiv1alpha3.TestStatu
 	r.Suggestions = make([]string, 0)
 
 	// Install operator
-	output, err := exec.Command("/usr/local/bin/operator-sdk", "version").Output()
-	if err != nil {
-		log.Fatalf("Unable to run operator-sdk: %v", err)
+	GenerateTemporaryDirs()
+	if err := actions.ExtractIndexDB("registry.redhat.io/redhat/certified-operator-index:v4.9", "docker"); err != nil {
+		log.Fatalf("Unable to ExtractIndexDB: %v", err)
+	}
+	if err := GetDataFromIndexDB(); err != nil {
+		log.Fatalf("Unable to GetDataFromIndexDB: %v", err)
 	}
 
-	log.Println(string(output))
+	// output, err := exec.Command("/usr/local/bin/operator-sdk", "version").Output()
+	// if err != nil {
+	// 	log.Fatalf("Unable to run operator-sdk: %v", err)
+	// }
+
+	// log.Println(string(output))
 
 	// Create CR from first object in alm-examples array
 
 	// Get alm-examples
-	almExamples := bundle.CSV.GetAnnotations()["alm-examples"]
-	// TODO: should this be a fatal error?
-	if almExamples == "" {
-		fmt.Println("no alm-examples in the bundle CSV")
-	}
+	// almExamples := bundle.CSV.GetAnnotations()["alm-examples"]
+	// // TODO: should this be a fatal error?
+	// if almExamples == "" {
+	// 	fmt.Println("no alm-examples in the bundle CSV")
+	// }
 
 	// Apply alm-example to cluster
 
@@ -269,4 +281,79 @@ func wrapResult(r scapiv1alpha3.TestResult) scapiv1alpha3.TestStatus {
 	return scapiv1alpha3.TestStatus{
 		Results: []scapiv1alpha3.TestResult{r},
 	}
+}
+
+func GenerateTemporaryDirs() {
+	command := exec.Command("rm", "-rf", "tmp")
+	_, _ = actions.RunCommand(command)
+
+	command = exec.Command("rm", "-rf", "./output/")
+	_, _ = actions.RunCommand(command)
+
+	command = exec.Command("mkdir", "./output/")
+	_, err := actions.RunCommand(command)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	command = exec.Command("mkdir", "tmp")
+	_, err = actions.RunCommand(command)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func GetDataFromIndexDB() error {
+	// Connect to the database
+	db, err := sql.Open("sqlite3", "./output/index.db")
+	if err != nil {
+		return fmt.Errorf("unable to connect in to the database : %s", err)
+	}
+
+	sql, err := bundle.BuildBundlesQuery()
+	if err != nil {
+		return err
+	}
+
+	row, err := db.Query(sql)
+	if err != nil {
+		return fmt.Errorf("unable to query the index db : %s", err)
+	}
+
+	auditBundle := make(map[string]string)
+
+	defer row.Close()
+	for row.Next() {
+		var bundleName string
+		var bundlePath string
+
+		err = row.Scan(&bundleName, &bundlePath)
+		if err != nil {
+			log.Errorf("unable to scan data from index %s\n", err.Error())
+		}
+		log.Infof("Generating data from the bundle (%s)", bundleName)
+
+		//map to get bundleName,BundlePath
+		//write to json file
+
+		// the csv is pruned from the database to save space.
+		// See that is store only what is needed to populate the package manifest on cluster, all the extra
+		// manifests are pruned to save storage space
+
+		defer row.Close()
+
+		auditBundle[bundleName] = bundlePath
+		//auditBundle = add(auditBundle, map[string]string{bundleName: bundlePath})
+		//build map here
+	}
+	//marshal auditBundle to json file
+	jsonStr, err := json.Marshal(auditBundle)
+	if err != nil {
+		fmt.Printf("Error: %s", err.Error())
+	}
+	err = ioutil.WriteFile("test.json", jsonStr, 0644)
+	if err != nil {
+		fmt.Printf("Error: %s", err.Error())
+	}
+	return nil
 }

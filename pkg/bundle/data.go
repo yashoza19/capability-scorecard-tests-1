@@ -24,8 +24,8 @@ type DockerInspect struct {
 	DockerConfig DockerConfig `json:"Config"`
 }
 
-func (d *Data) BuildBundlesQuery() (string, error) {
-	query := sq.Select("o.name, o.csv, o.bundlepath").From(
+func BuildBundlesQuery() (string, error) {
+	query := sq.Select("o.name, o.bundlepath").From(
 		"operatorbundle o")
 
 	query.OrderBy("o.name")
