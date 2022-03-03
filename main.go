@@ -17,9 +17,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
+
+	log "github.com/sirupsen/logrus"
 
 	scapiv1alpha3 "github.com/operator-framework/api/pkg/apis/scorecard/v1alpha3"
 	apimanifests "github.com/operator-framework/api/pkg/manifests"
@@ -89,7 +90,7 @@ func printValidTests() scapiv1alpha3.TestStatus {
 		CapabilityLevelThreeTestName,
 		CapabilityLevelFourTestName,
 		CapabilityLevelFiveTestName,
-		)
+	)
 	result.Errors = append(result.Errors, str)
 	return scapiv1alpha3.TestStatus{
 		Results: []scapiv1alpha3.TestResult{result},
@@ -97,11 +98,11 @@ func printValidTests() scapiv1alpha3.TestStatus {
 }
 
 const (
-	CapabilityLevelOneTestName = "capability-level-one"
-	CapabilityLevelTwoTestName = "capability-level-two"
+	CapabilityLevelOneTestName   = "capability-level-one"
+	CapabilityLevelTwoTestName   = "capability-level-two"
 	CapabilityLevelThreeTestName = "capability-level-three"
-	CapabilityLevelFourTestName = "capability-level-four"
-	CapabilityLevelFiveTestName = "capability-level-five"
+	CapabilityLevelFourTestName  = "capability-level-four"
+	CapabilityLevelFiveTestName  = "capability-level-five"
 )
 
 // CapabilityLevelOneTest accepts a *apimanifests.Bundle and returns scapiv1alpha3.TestStatus
